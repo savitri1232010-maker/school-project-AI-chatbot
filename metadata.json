@@ -1,0 +1,6 @@
+{
+  "name": "Quickio AI — Multimodal Desktop Suite & CustomTkinter Studio",
+  "description": "Production-ready Quickio AI workspace featuring Vision & Ecology, Safety & Biometrics, Productivity tools, Live YOLO Bounding Box Camera Tracker, dual Network/Offline Mode Router, and exportable Python CustomTkinter source code.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
