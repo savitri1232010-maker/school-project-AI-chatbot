@@ -98,12 +98,23 @@ def get_ai_response(
                     if "503" in err_str or "unavailable" in err_str or "429" in err_str or "quota" in err_str:
                         continue
                     raise model_exc
-            raise last_err
         except Exception as exc:
             err_lower = str(exc).lower()
+            if "api_key" in err_lower or "unauthenticated" in err_lower or "permission_denied" in err_lower or "403" in err_lower:
+                return (
+                    "API Key Invalid or Expired.\n"
+                    "Please open 'Setting ⚙' in the bottom-left to enter a valid free key from aistudio.google.com/apikey, "
+                    "or switch to 'Offline mode' in the top-right corner to use your local GPU."
+                )
             if "429" in err_lower or "quota" in err_lower or "resource_exhausted" in err_lower or "limit" in err_lower:
-                return "Limit reached. Please switch to Offline mode in the top-right corner to continue using Quickio on your local GPU."
-            return "Limit reached or cloud busy. Please switch to Offline mode in the top-right corner."
+                return (
+                    "Limit reached on Google Cloud free tier (15 requests/minute).\n"
+                    "Please switch to 'Offline mode' in the top-right corner to run Gemma on your local GPU with unlimited usage."
+                )
+            return (
+                f"Quickio Cloud Notice: {str(exc)}\n"
+                "Tip: Switch to 'Offline mode' in the top-right corner to use your local GPU directly."
+            )
 
     elif mode == "Offline":
         selected_model = ollama_model_override or (
@@ -403,6 +414,9 @@ class LiveBoundingBoxTracker:
                 return
 
             window_title = f"Quickio Live — 30 FPS Bounding Box Tracker [Cam {self.camera_index}] (Press 'Q' to Exit)"
+            cv2.namedWindow(window_title, cv2.WINDOW_NORMAL)
+            frame_count = 0
+
             while self._running:
                 ret, frame = cap.read()
                 if not ret or frame is None:
@@ -429,10 +443,17 @@ class LiveBoundingBoxTracker:
                         cv2.putText(frame, label, (x1, max(y1 - 6, 16)), cv2.FONT_HERSHEY_SIMPLEX, 0.56, color, 2)
 
                 cv2.imshow(window_title, frame)
-                if (cv2.waitKey(1) & 0xFF) in (ord("q"), ord("Q"), 27):
+                frame_count += 1
+                key = cv2.waitKey(1) & 0xFF
+                if key in (ord("q"), ord("Q"), 27):
                     break
-                if cv2.getWindowProperty(window_title, cv2.WND_PROP_VISIBLE) < 1:
-                    break
+                # Only check if user clicked the 'X' button after window has fully rendered 25 frames
+                if frame_count > 25:
+                    try:
+                        if cv2.getWindowProperty(window_title, cv2.WND_PROP_VISIBLE) == 0:
+                            break
+                    except Exception:
+                        pass
 
             cap.release()
             cv2.destroyAllWindows()
